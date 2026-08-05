@@ -1,0 +1,19 @@
+services:
+  netwatch:
+    build: .
+    image: netwatch:edge
+    restart: unless-stopped
+    environment:
+      NETWATCH_TARGETS: "sensor-collector"
+      NETWATCH_CHECK_INTERVAL: "30s"
+      NETWATCH_ALERT_AFTER: "90s"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # The image runs as the distroless nonroot user; it needs the host's
+    # docker group GID as a supplementary group to read the socket.
+    # Get it on the host with:  getent group docker
+    group_add:
+      - "994"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
