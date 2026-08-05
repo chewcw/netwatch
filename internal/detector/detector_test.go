@@ -91,14 +91,14 @@ func TestMinTrafficBoundary(t *testing.T) {
 	// minTraffic=200: delta 200 is silent, delta 201 is active
 	d := New("c", 3, 200)
 	d.Feed(0, 0)
-	d.Feed(200, 200) // silent (== threshold)
-	d.Feed(200, 200) // silent again -> alert
+	d.Feed(200, 200) // silent (delta == minTraffic)
+	d.Feed(200, 200) // silent tick 2
 	if got := d.Feed(200, 200); len(got) != 1 || got[0].Kind != KindAlerted {
 		t.Fatalf("want Alerted on delta==minTraffic, got %v", kinds(got))
 	}
 	d2 := New("c", 3, 200)
 	d2.Feed(0, 0)
-	d2.Feed(201, 201) // active (> threshold)
+	d2.Feed(201, 201) // active (delta > minTraffic)
 	d2.Feed(201, 201) // still active, no alert
 	if got := d2.Feed(201, 201); len(got) != 0 {
 		t.Fatalf("delta>minTraffic emitted: %v", kinds(got))
