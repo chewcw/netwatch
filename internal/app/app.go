@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/chewcw/go-monitoring/internal/config"
-	"github.com/chewcw/go-monitoring/internal/detector"
-	"github.com/chewcw/go-monitoring/internal/docker"
-	"github.com/chewcw/go-monitoring/internal/notify"
+	"github.com/chewcw/netwatch/internal/config"
+	"github.com/chewcw/netwatch/internal/detector"
+	"github.com/chewcw/netwatch/internal/docker"
+	"github.com/chewcw/netwatch/internal/notify"
 )
 
 // Run runs the monitoring loop until ctx is cancelled. stats and n are

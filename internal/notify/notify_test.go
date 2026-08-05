@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chewcw/go-monitoring/internal/detector"
+	"github.com/chewcw/netwatch/internal/detector"
 )
 
 func TestLogNotifier(t *testing.T) {

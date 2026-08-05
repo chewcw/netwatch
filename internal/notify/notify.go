@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/chewcw/go-monitoring/internal/detector"
+	"github.com/chewcw/netwatch/internal/detector"
 )
 
 type Notifier interface {

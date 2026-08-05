@@ -1,4 +1,4 @@
-module github.com/chewcw/go-monitoring
+module github.com/chewcw/netwatch
 
 go 1.26.5
 

@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/chewcw/go-monitoring/internal/app"
-	"github.com/chewcw/go-monitoring/internal/config"
-	"github.com/chewcw/go-monitoring/internal/docker"
-	"github.com/chewcw/go-monitoring/internal/notify"
+	"github.com/chewcw/netwatch/internal/app"
+	"github.com/chewcw/netwatch/internal/config"
+	"github.com/chewcw/netwatch/internal/docker"
+	"github.com/chewcw/netwatch/internal/notify"
 )
 
 func main() {

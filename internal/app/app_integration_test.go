@@ -11,9 +11,9 @@ import (
 
 	dock "github.com/fsouza/go-dockerclient"
 
-	"github.com/chewcw/go-monitoring/internal/config"
-	"github.com/chewcw/go-monitoring/internal/detector"
-	"github.com/chewcw/go-monitoring/internal/docker"
+	"github.com/chewcw/netwatch/internal/config"
+	"github.com/chewcw/netwatch/internal/detector"
+	"github.com/chewcw/netwatch/internal/docker"
 )
 
 // recordingNotifier captures alerts for inspection in tests.
