@@ -67,6 +67,7 @@ func TestLoadInvalid(t *testing.T) {
 		want string
 	}{
 		{"no targets", map[string]string{}, "NETWATCH_TARGETS"},
+		{"only commas", map[string]string{"NETWATCH_TARGETS": ", ,"}, "NETWATCH_TARGETS"},
 		{"bad interval", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_CHECK_INTERVAL": "fast"}, "NETWATCH_CHECK_INTERVAL"},
 		{"zero interval", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_CHECK_INTERVAL": "0s"}, "NETWATCH_CHECK_INTERVAL"},
 		{"negative traffic", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_MIN_TRAFFIC": "-5"}, "NETWATCH_MIN_TRAFFIC"},

@@ -30,6 +30,9 @@ func Load() (Config, error) {
 			cfg.Targets = append(cfg.Targets, p)
 		}
 	}
+	if len(cfg.Targets) == 0 {
+		return cfg, fmt.Errorf("NETWATCH_TARGETS: no valid container names after parsing %q", raw)
+	}
 
 	interval, err := durationEnv("NETWATCH_CHECK_INTERVAL", 30*time.Second)
 	if err != nil {
