@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,11 +30,26 @@ func (f *fakeStats) GetStats(_ context.Context, _ string) (uint64, uint64, error
 	return r.rx, r.tx, r.err
 }
 
-type fakeNotifier struct{ alerts []detector.Alert }
+type fakeNotifier struct {
+	mu     sync.Mutex
+	alerts []detector.Alert
+}
 
 func (f *fakeNotifier) Notify(_ context.Context, a detector.Alert) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.alerts = append(f.alerts, a)
 	return nil
+}
+
+// snapshot returns a copy of the alerts recorded so far, so callers can
+// read them without racing the Run goroutine that writes via Notify.
+func (f *fakeNotifier) snapshot() []detector.Alert {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]detector.Alert, len(f.alerts))
+	copy(out, f.alerts)
+	return out
 }
 
 func TestThresholdTicks(t *testing.T) {
@@ -75,16 +91,17 @@ func TestRunEndToEndSequence(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, stats, n) }()
 
-	waitFor(t, func() bool { return len(n.alerts) >= 2 }, 2*time.Second)
+	waitFor(t, func() bool { return len(n.snapshot()) >= 2 }, 2*time.Second)
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("Run error = %v", err)
 	}
-	if len(n.alerts) != 2 {
-		t.Fatalf("alerts = %v, want 2", n.alerts)
+	alerts := n.snapshot()
+	if len(alerts) != 2 {
+		t.Fatalf("alerts = %v, want 2", alerts)
 	}
-	if n.alerts[0].Kind != detector.KindAlerted || n.alerts[1].Kind != detector.KindRecovered {
-		t.Fatalf("kinds = %v, want [Alerted Recovered]", []detector.Kind{n.alerts[0].Kind, n.alerts[1].Kind})
+	if alerts[0].Kind != detector.KindAlerted || alerts[1].Kind != detector.KindRecovered {
+		t.Fatalf("kinds = %v, want [Alerted Recovered]", []detector.Kind{alerts[0].Kind, alerts[1].Kind})
 	}
 }
 
@@ -107,8 +124,8 @@ func TestRunTransientErrorIsNotSilence(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 	cancel()
 	<-done
-	if len(n.alerts) != 0 {
-		t.Fatalf("alerts = %v, want none (transient errors)", n.alerts)
+	if len(n.snapshot()) != 0 {
+		t.Fatalf("alerts = %v, want none (transient errors)", n.snapshot())
 	}
 }
 
@@ -130,11 +147,12 @@ func TestRunDeadAndBack(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, cfg, stats, n) }()
-	waitFor(t, func() bool { return len(n.alerts) >= 2 }, 2*time.Second)
+	waitFor(t, func() bool { return len(n.snapshot()) >= 2 }, 2*time.Second)
 	cancel()
 	<-done
-	if len(n.alerts) != 2 || n.alerts[0].Kind != detector.KindDead || n.alerts[1].Kind != detector.KindBack {
-		t.Fatalf("alerts = %v, want [Dead Back]", n.alerts)
+	alerts := n.snapshot()
+	if len(alerts) != 2 || alerts[0].Kind != detector.KindDead || alerts[1].Kind != detector.KindBack {
+		t.Fatalf("alerts = %v, want [Dead Back]", alerts)
 	}
 }
 
@@ -160,8 +178,8 @@ func TestRunHungDaemonDoesNotStall(t *testing.T) {
 	if err := <-done; err != nil {
 		t.Fatalf("Run error = %v", err)
 	}
-	if len(n.alerts) != 0 {
-		t.Fatalf("alerts = %v, want none", n.alerts)
+	if len(n.snapshot()) != 0 {
+		t.Fatalf("alerts = %v, want none", n.snapshot())
 	}
 }
 
