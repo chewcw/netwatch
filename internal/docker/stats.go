@@ -8,7 +8,10 @@ import (
 	"github.com/fsouza/go-dockerclient"
 )
 
-var ErrNotFound = errors.New("container not found")
+var (
+	ErrNotFound = errors.New("container not found")
+	ErrStopped  = errors.New("container not running")
+)
 
 type StatsClient interface {
 	GetStats(ctx context.Context, name string) (rx, tx uint64, err error)
@@ -26,9 +29,31 @@ func New(host string) (*Client, error) {
 	return &Client{c: c}, nil
 }
 
-// GetStats fetches one non-streaming stats sample and returns the aggregate
-// rx/tx byte counts across all of the container's network interfaces.
+// GetStats returns the aggregate rx/tx byte counts across all of the
+// container's network interfaces. ErrNotFound if the container does not
+// exist (removed); ErrStopped if it exists but is not running — modern
+// Docker returns zeroed stats for stopped containers, so running state is
+// checked explicitly via inspect (zeroed stats would otherwise read as
+// silence, not death).
 func (c *Client) GetStats(ctx context.Context, name string) (uint64, uint64, error) {
+	rx, tx, err := c.fetchStats(ctx, name)
+	if err != nil {
+		return 0, 0, err
+	}
+	ctr, err := c.c.InspectContainerWithOptions(docker.InspectContainerOptions{Context: ctx, ID: name})
+	if err != nil {
+		return 0, 0, classifyError(err)
+	}
+	if !ctr.State.Running {
+		return 0, 0, ErrStopped
+	}
+	return rx, tx, nil
+}
+
+// fetchStats fetches one non-streaming stats sample and returns the
+// aggregate rx/tx byte counts across all of the container's network
+// interfaces.
+func (c *Client) fetchStats(ctx context.Context, name string) (uint64, uint64, error) {
 	ch := make(chan *docker.Stats, 1)
 	errCh := make(chan error, 1)
 	go func() {

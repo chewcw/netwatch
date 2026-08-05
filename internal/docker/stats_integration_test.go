@@ -44,17 +44,23 @@ func TestGetStatsAgainstRealDaemon(t *testing.T) {
 		t.Fatalf("GetStats on running container: %v", err)
 	}
 
-	// Removed container: must surface as ErrNotFound.
-	// NOTE: a STOPPED (but not removed) container is NOT an error path on
-	// modern Docker: the daemon returns 200 with zeroed stats (read=
-	// zero-time) instead of 404. Only a removed container yields the 404
-	// "No such container" that maps to ErrNotFound.
+	// Stopped container: modern Docker returns HTTP 200 with zeroed stats,
+	// NOT 404 — running state must be surfaced explicitly as ErrStopped.
+	if err := client.StopContainer(ctr.ID, 5); err != nil {
+		t.Fatalf("stop: %v", err)
+	}
+	_, _, err = cl.GetStats(ctx, ctr.ID)
+	if !errors.Is(err, ErrStopped) {
+		t.Fatalf("GetStats on stopped container = %v, want ErrStopped", err)
+	}
+
+	// Removed container: 404 -> ErrNotFound.
 	if err := client.RemoveContainer(docker.RemoveContainerOptions{ID: ctr.ID, Force: true}); err != nil {
 		t.Fatalf("remove: %v", err)
 	}
 	_, _, err = cl.GetStats(ctx, ctr.ID)
 	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("GetStats on removed container: err = %v, want ErrNotFound", err)
+		t.Fatalf("GetStats on removed container = %v, want ErrNotFound", err)
 	}
 }
 
