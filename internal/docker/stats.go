@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/fsouza/go-dockerclient"
 )
@@ -81,7 +82,32 @@ func (c *Client) fetchStats(ctx context.Context, name string) (uint64, uint64, e
 	if err != nil {
 		return 0, 0, classifyError(err)
 	}
-	return s.Network.RxBytes, s.Network.TxBytes, nil
+	rx, tx := uint64(0), uint64(0)
+	if len(s.Networks) > 0 {
+		for _, ns := range s.Networks {
+			rx += ns.RxBytes
+			tx += ns.TxBytes
+		}
+	} else {
+		rx, tx = s.Network.RxBytes, s.Network.TxBytes
+	}
+	return rx, tx, nil
+}
+
+// ListContainers returns the names (without leading "/") of all containers,
+// including stopped ones.
+func (c *Client) ListContainers(ctx context.Context, all bool) ([]string, error) {
+	list, err := c.c.ListContainers(docker.ListContainersOptions{Context: ctx, All: all})
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(list))
+	for _, ctr := range list {
+		for _, n := range ctr.Names {
+			names = append(names, strings.TrimPrefix(n, "/"))
+		}
+	}
+	return names, nil
 }
 
 func classifyError(err error) error {
