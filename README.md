@@ -61,6 +61,36 @@ alert target=sensor-collector kind=alerted rx_silent=true tx_silent=true rx_delt
 
 ## Usage
 
+### Commands
+
+```
+netwatch                 # run the monitoring loop (default)
+netwatch run [flags]     # run the monitoring loop, explicitly
+netwatch auth-login      # one-time Microsoft device-code login for email alerts
+netwatch test-email      # send a test email through the configured channel
+netwatch completion bash # generate shell completion (also: zsh, fish, powershell)
+netwatch --version       # print version
+```
+
+`run` (and bare `netwatch`) accepts these flags, which override the
+corresponding environment variables — precedence is **flag > env > default**:
+
+| Flag | Overrides | Default |
+|---|---|---|
+| `--targets a,b` | `NETWATCH_TARGETS` | required |
+| `--check-interval 45s` | `NETWATCH_CHECK_INTERVAL` | 30s |
+| `--alert-after 2m` | `NETWATCH_ALERT_AFTER` | 3 × check-interval |
+| `--min-traffic 100` | `NETWATCH_MIN_TRAFFIC` | 0 |
+| `--docker-host tcp://h:2375` | `NETWATCH_DOCKER_HOST` | unix:///var/run/docker.sock |
+| `--notify log,email` | `NETWATCH_NOTIFY` | log |
+| `--log-level debug` | `NETWATCH_LOG_LEVEL` | info |
+
+Setting `--check-interval` without `--alert-after` keeps the env-derived
+`alert-after` (3 × the env interval) — no surprise recompute.
+
+Email configuration (`NETWATCH_EMAIL_*`) stays environment-only: `auth-login`
+and `test-email` need only the email variables (not `NETWATCH_TARGETS`).
+
 ### Docker Compose
 
 ```yaml
@@ -134,6 +164,9 @@ docker exec netwatch auth-login     # or the docker run one-liner in compose.yam
 # visit the printed URL, enter the code
 docker exec netwatch test-email     # verify delivery end-to-end
 ```
+
+`auth-login` and `test-email` read only the `NETWATCH_EMAIL_*` variables —
+they do not require `NETWATCH_TARGETS` or docker access.
 
 ### Token lifecycle
 
