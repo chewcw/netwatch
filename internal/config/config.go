@@ -14,8 +14,16 @@ type Config struct {
 	AlertAfter    time.Duration
 	MinTraffic    uint64
 	DockerHost    string
-	Notify        string
+	Notify        []string
 	LogLevel      string
+
+	EmailTenantID    string
+	EmailClientID    string
+	EmailTo          []string
+	EmailTokenFile   string
+	EmailKeepAlive   time.Duration
+	EmailRetryWindow time.Duration
+	EmailHost        string
 }
 
 func Load() (Config, error) {
@@ -53,14 +61,72 @@ func Load() (Config, error) {
 	cfg.MinTraffic = mt
 
 	cfg.DockerHost = strEnv("NETWATCH_DOCKER_HOST", "unix:///var/run/docker.sock")
-	cfg.Notify = strEnv("NETWATCH_NOTIFY", "log")
+
+	notifyRaw := os.Getenv("NETWATCH_NOTIFY")
+	var notify []string
+	if notifyRaw == "" {
+		notify = []string{"log"}
+	} else {
+		for _, p := range strings.Split(notifyRaw, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				notify = append(notify, p)
+			}
+		}
+	}
+	if len(notify) == 0 {
+		return cfg, fmt.Errorf("NETWATCH_NOTIFY: no channels after parsing %q", notifyRaw)
+	}
+	for _, ch := range notify {
+		switch ch {
+		case "log", "email":
+		default:
+			return cfg, fmt.Errorf("NETWATCH_NOTIFY: unsupported channel %q", ch)
+		}
+	}
+	cfg.Notify = notify
+
 	cfg.LogLevel = strEnv("NETWATCH_LOG_LEVEL", "info")
 
-	switch cfg.Notify {
-	case "log":
-	default:
-		return cfg, fmt.Errorf("NETWATCH_NOTIFY: unsupported %q (only \"log\" for now)", cfg.Notify)
+	cfg.EmailKeepAlive, err = durationEnv("NETWATCH_EMAIL_KEEPALIVE", 12*time.Hour)
+	if err != nil {
+		return cfg, err
 	}
+	cfg.EmailRetryWindow, err = durationEnv("NETWATCH_EMAIL_RETRY_WINDOW", 5*time.Minute)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.EmailHost = strEnv("NETWATCH_EMAIL_HOST", "")
+
+	emailEnabled := false
+	for _, ch := range notify {
+		if ch == "email" {
+			emailEnabled = true
+			break
+		}
+	}
+	if emailEnabled {
+		cfg.EmailTenantID = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_TENANT_ID"))
+		if cfg.EmailTenantID == "" {
+			return cfg, fmt.Errorf("NETWATCH_EMAIL_TENANT_ID: required when email channel is enabled")
+		}
+		cfg.EmailClientID = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_CLIENT_ID"))
+		if cfg.EmailClientID == "" {
+			return cfg, fmt.Errorf("NETWATCH_EMAIL_CLIENT_ID: required when email channel is enabled")
+		}
+		for _, p := range strings.Split(os.Getenv("NETWATCH_EMAIL_TO"), ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				cfg.EmailTo = append(cfg.EmailTo, p)
+			}
+		}
+		if len(cfg.EmailTo) == 0 {
+			return cfg, fmt.Errorf("NETWATCH_EMAIL_TO: required, comma-separated recipients, when email channel is enabled")
+		}
+		cfg.EmailTokenFile = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_TOKEN_FILE"))
+		if cfg.EmailTokenFile == "" {
+			return cfg, fmt.Errorf("NETWATCH_EMAIL_TOKEN_FILE: required when email channel is enabled")
+		}
+	}
+
 	switch cfg.LogLevel {
 	case "debug", "info", "warn", "error":
 	default:

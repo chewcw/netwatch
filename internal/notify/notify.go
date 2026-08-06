@@ -28,3 +28,19 @@ func (logNotifier) Notify(_ context.Context, a detector.Alert) error {
 	)
 	return nil
 }
+
+// Multi fans an alert out to several notifiers, always running every
+// notifier and returning the first error encountered.
+type multi []Notifier
+
+func Multi(ns ...Notifier) Notifier { return multi(ns) }
+
+func (m multi) Notify(ctx context.Context, a detector.Alert) error {
+	var firstErr error
+	for _, n := range m {
+		if err := n.Notify(ctx, a); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}

@@ -172,7 +172,7 @@ func TestIntegrationFullFlow(t *testing.T) {
 		CheckInterval: 2 * time.Second,
 		AlertAfter:    6 * time.Second, // ceil(6/2)=3 ticks
 		MinTraffic:    0,
-		Notify:        "log",
+		Notify:        []string{"log"},
 	}
 
 	stats, err := docker.New("unix:///var/run/docker.sock")
