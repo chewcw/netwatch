@@ -31,7 +31,7 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.DockerHost != "unix:///var/run/docker.sock" {
 		t.Errorf("DockerHost = %q", cfg.DockerHost)
 	}
-	if len(cfg.Notify) != 1 || cfg.Notify[0] != "log" {
+	if len(cfg.Notify) != 1 || cfg.Notify[0] != "log" || cfg.LogLevel != "info" {
 		t.Errorf("Notify=%v LogLevel=%q", cfg.Notify, cfg.LogLevel)
 	}
 }

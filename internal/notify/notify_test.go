@@ -37,6 +37,29 @@ func (f *fakeNotifier) Notify(_ context.Context, _ detector.Alert) error {
 	return f.err
 }
 
+func TestMultiClose(t *testing.T) {
+	var closed string
+	closable := &closeNotifier{name: "c1", closed: &closed}
+	plain := &fakeNotifier{name: "p1", log: &[]string{}}
+	mu := Multi(closable, plain)
+	if c, ok := mu.(interface{ Close() }); ok {
+		c.Close()
+	} else {
+		t.Fatal("multi does not implement Close")
+	}
+	if closed != "c1" {
+		t.Errorf("closable notifier not closed: got %q", closed)
+	}
+}
+
+type closeNotifier struct {
+	name   string
+	closed *string
+}
+
+func (f *closeNotifier) Notify(_ context.Context, _ detector.Alert) error { return nil }
+func (f *closeNotifier) Close()                                         { *f.closed = f.name }
+
 func TestLogNotifier(t *testing.T) {
 	var buf bytes.Buffer
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})))

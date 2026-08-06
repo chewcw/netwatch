@@ -44,3 +44,14 @@ func (m multi) Notify(ctx context.Context, a detector.Alert) error {
 	}
 	return firstErr
 }
+
+// Close stops every notifier in the chain that implements Close (e.g. the
+// email notifier's keep-alive and in-flight send goroutines). Notifiers
+// without Close are left alone.
+func (m multi) Close() {
+	for _, n := range m {
+		if c, ok := n.(interface{ Close() }); ok {
+			c.Close()
+		}
+	}
+}
