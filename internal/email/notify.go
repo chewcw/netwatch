@@ -26,7 +26,7 @@ func New(ctx context.Context, cfg Config) *notifier {
 	}
 	n.ctx, n.cancel = context.WithCancel(ctx)
 	store := NewTokenStore(cfg.TokenFile)
-	ts, err := newTokenSource(ctx, cfg, store)
+	ts, err := newTokenSource(n.ctx, cfg, store)
 	if err != nil {
 		slog.Error("email: no usable token — email notifications disabled until `netwatch auth-login` is run", "err", err)
 		return n
