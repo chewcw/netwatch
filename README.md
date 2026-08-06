@@ -43,8 +43,15 @@ Alert kinds: `alerted` (incident starts), `recovered` (traffic resumed),
 | `NETWATCH_ALERT_AFTER` | `3 × interval` | Silence/dead duration before alerting |
 | `NETWATCH_MIN_TRAFFIC` | `0` | Bytes/tick; a delta at or below this counts as silent (set higher to ride over MQTT keepalive noise) |
 | `NETWATCH_DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon endpoint |
-| `NETWATCH_NOTIFY` | `log` | Notifier backend (only `log` for now; email/Telegram planned) |
+| `NETWATCH_NOTIFY` | `log` | Notifier channels, comma-separated: `log`, `email` (email also always logs) |
 | `NETWATCH_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `NETWATCH_EMAIL_TENANT_ID` | — | Required when `email` enabled. Entra tenant ID |
+| `NETWATCH_EMAIL_CLIENT_ID` | — | Required when `email` enabled. Entra app (public client) ID |
+| `NETWATCH_EMAIL_TO` | — | Required when `email` enabled. Comma-separated recipients |
+| `NETWATCH_EMAIL_TOKEN_FILE` | — | Required when `email` enabled. Path to the token file (e.g. `/data/netwatch-email-token.json`) |
+| `NETWATCH_EMAIL_KEEPALIVE` | `12h` | Token refresh interval (keeps the token alive past the 90-day inactivity window) |
+| `NETWATCH_EMAIL_RETRY_WINDOW` | `5m` | Max retry span for a failed email send |
+| `NETWATCH_EMAIL_HOST` | hostname | Overrides the `[netwatch: <host>]` label in email subjects |
 
 Alerts are written as structured log lines to stdout, e.g.:
 
@@ -102,6 +109,42 @@ needs the host docker group GID as a supplementary group (on the device,
 ```
 
 Set `NETWATCH_TARGETS` to the name(s) of the module(s) to watch.
+
+## Email notifications (Microsoft 365)
+
+Optional channel: alerts are also emailed from your Microsoft 365 mailbox
+via Microsoft Graph (delegated `Mail.Send`, acting as you). It uses a
+one-time OAuth 2.0 device-code login — no client secret, no redirect URI.
+
+### One-time Entra app registration
+
+Create an app registration and note its **TENANT_ID** and **CLIENT_ID**.
+In the **Authentication** tab, enable **public client flows** — the
+device-code flow needs this; no redirect URI and no client secret are used.
+In **API permissions**, add Microsoft Graph **Delegated permissions** for
+`Mail.Send` (`offline_access` is requested automatically by the app). The
+user consents at first login.
+
+### One-time setup on the edge PC
+
+Enable email in `compose.yaml` (see the commented block), then:
+
+```sh
+docker exec netwatch auth-login     # or the docker run one-liner in compose.yaml
+# visit the printed URL, enter the code
+docker exec netwatch test-email     # verify delivery end-to-end
+```
+
+### Token lifecycle
+
+The token is rotated on every refresh and re-persisted; the keep-alive
+refreshes every `NETWATCH_EMAIL_KEEPALIVE` so the 90-day inactivity
+revocation never applies. If the token dies anyway (password change, user
+deactivated, admin revokes consent, Conditional Access), netwatch logs a
+loud error and alerts fall back to the log channel — re-run `auth-login`
+and restart the container.
+
+Treat the token file (plaintext JSON, 0600 permissions) like a password.
 
 ## Security note
 

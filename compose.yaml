@@ -17,3 +17,22 @@ services:
     read_only: true
     security_opt:
       - no-new-privileges:true
+
+    # --- Email notification (optional) ------------------------------------
+    # M365 email alerts need a one-time device-code login. Enable with:
+    #   docker exec netwatch auth-login     (or: docker run --rm -it -v netwatch-data:/data -v /var/run/docker.sock:/var/run/docker.sock --group-add "$(getent group docker | cut -d: -f3)" netwatch:edge auth-login)
+    #   docker exec netwatch test-email
+    # The token file lives on the netwatch-data volume; the image's nonroot
+    # user (uid 65532) must be able to write it.
+    # volumes:
+    #   - netwatch-data:/data
+    # environment:
+    #   NETWATCH_NOTIFY: "email"
+    #   NETWATCH_EMAIL_TENANT_ID: "<your-tenant-id>"
+    #   NETWATCH_EMAIL_CLIENT_ID: "<your-client-id>"
+    #   NETWATCH_EMAIL_TO: "you@example.com,teammate@example.com"
+    #   NETWATCH_EMAIL_TOKEN_FILE: "/data/netwatch-email-token.json"
+    #   NETWATCH_EMAIL_HOST: "edge-pc-1"
+
+# volumes:
+#   netwatch-data:
