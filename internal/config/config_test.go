@@ -182,3 +182,85 @@ func TestLoadNotifyBadChannel(t *testing.T) {
 		t.Errorf("err = %v, want unsupported channel error", err)
 	}
 }
+
+func TestLoadEmail(t *testing.T) {
+	setEnv(t, map[string]string{
+		"NETWATCH_EMAIL_TENANT_ID":  "t-id",
+		"NETWATCH_EMAIL_CLIENT_ID":  "c-id",
+		"NETWATCH_EMAIL_TOKEN_FILE": "/data/token.json",
+		"NETWATCH_EMAIL_TO":         "a@example.com, b@example.com",
+		"NETWATCH_EMAIL_KEEPALIVE":  "2h",
+	})
+	cfg, err := LoadEmail()
+	if err != nil {
+		t.Fatalf("LoadEmail() error = %v", err)
+	}
+	if cfg.EmailTenantID != "t-id" {
+		t.Errorf("EmailTenantID = %q, want t-id", cfg.EmailTenantID)
+	}
+	if cfg.EmailClientID != "c-id" {
+		t.Errorf("EmailClientID = %q, want c-id", cfg.EmailClientID)
+	}
+	if cfg.EmailTokenFile != "/data/token.json" {
+		t.Errorf("EmailTokenFile = %q, want /data/token.json", cfg.EmailTokenFile)
+	}
+	if len(cfg.EmailTo) != 2 || cfg.EmailTo[0] != "a@example.com" || cfg.EmailTo[1] != "b@example.com" {
+		t.Errorf("EmailTo = %v, want [a@example.com b@example.com]", cfg.EmailTo)
+	}
+	if cfg.EmailKeepAlive != 2*time.Hour {
+		t.Errorf("EmailKeepAlive = %v, want 2h", cfg.EmailKeepAlive)
+	}
+}
+
+func TestLoadEmailIgnoresCoreEnv(t *testing.T) {
+	// TARGETS and NOTIFY must be irrelevant to LoadEmail: auth-login /
+	// test-email work without them.
+	setEnv(t, map[string]string{
+		"NETWATCH_EMAIL_TENANT_ID":  "t-id",
+		"NETWATCH_EMAIL_CLIENT_ID":  "c-id",
+		"NETWATCH_EMAIL_TOKEN_FILE": "/data/token.json",
+	})
+	cfg, err := LoadEmail()
+	if err != nil {
+		t.Fatalf("LoadEmail() error = %v", err)
+	}
+	if len(cfg.Targets) != 0 || len(cfg.Notify) != 0 {
+		t.Errorf("LoadEmail populated core fields: Targets=%v Notify=%v", cfg.Targets, cfg.Notify)
+	}
+}
+
+func TestLoadEmailSubDefaults(t *testing.T) {
+	setEnv(t, map[string]string{
+		"NETWATCH_EMAIL_TENANT_ID":  "t-id",
+		"NETWATCH_EMAIL_CLIENT_ID":  "c-id",
+		"NETWATCH_EMAIL_TOKEN_FILE": "/data/token.json",
+	})
+	cfg, err := LoadEmail()
+	if err != nil {
+		t.Fatalf("LoadEmail() error = %v", err)
+	}
+	if cfg.EmailKeepAlive != 12*time.Hour {
+		t.Errorf("EmailKeepAlive = %v, want default 12h", cfg.EmailKeepAlive)
+	}
+	if cfg.EmailRetryWindow != 5*time.Minute {
+		t.Errorf("EmailRetryWindow = %v, want default 5m", cfg.EmailRetryWindow)
+	}
+	if cfg.EmailHost != "" {
+		t.Errorf("EmailHost = %q, want empty default", cfg.EmailHost)
+	}
+}
+
+func TestLoadEmailRequired(t *testing.T) {
+	for name, kv := range map[string]map[string]string{
+		"tenant":    {"NETWATCH_EMAIL_CLIENT_ID": "c-id", "NETWATCH_EMAIL_TOKEN_FILE": "/data/token.json"},
+		"client":    {"NETWATCH_EMAIL_TENANT_ID": "t-id", "NETWATCH_EMAIL_TOKEN_FILE": "/data/token.json"},
+		"tokenfile": {"NETWATCH_EMAIL_TENANT_ID": "t-id", "NETWATCH_EMAIL_CLIENT_ID": "c-id"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			setEnv(t, kv)
+			if _, err := LoadEmail(); err == nil {
+				t.Fatalf("LoadEmail() succeeded, want error for missing %s", name)
+			}
+		})
+	}
+}

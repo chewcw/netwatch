@@ -135,6 +135,47 @@ func Load() (Config, error) {
 	return cfg, nil
 }
 
+// LoadEmail reads only the email configuration from the environment,
+// skipping all core validation (targets, notify channels, log level,
+// docker). It backs the auth-login and test-email subcommands, which need
+// email settings but no monitoring configuration.
+func LoadEmail() (Config, error) {
+	var cfg Config
+
+	cfg.EmailTenantID = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_TENANT_ID"))
+	if cfg.EmailTenantID == "" {
+		return cfg, fmt.Errorf("NETWATCH_EMAIL_TENANT_ID: required")
+	}
+	cfg.EmailClientID = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_CLIENT_ID"))
+	if cfg.EmailClientID == "" {
+		return cfg, fmt.Errorf("NETWATCH_EMAIL_CLIENT_ID: required")
+	}
+	cfg.EmailTokenFile = strings.TrimSpace(os.Getenv("NETWATCH_EMAIL_TOKEN_FILE"))
+	if cfg.EmailTokenFile == "" {
+		return cfg, fmt.Errorf("NETWATCH_EMAIL_TOKEN_FILE: required")
+	}
+	for _, p := range strings.Split(os.Getenv("NETWATCH_EMAIL_TO"), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			cfg.EmailTo = append(cfg.EmailTo, p)
+		}
+	}
+
+	keepAlive, err := durationEnv("NETWATCH_EMAIL_KEEPALIVE", 12*time.Hour)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.EmailKeepAlive = keepAlive
+
+	retryWindow, err := durationEnv("NETWATCH_EMAIL_RETRY_WINDOW", 5*time.Minute)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.EmailRetryWindow = retryWindow
+
+	cfg.EmailHost = strEnv("NETWATCH_EMAIL_HOST", "")
+	return cfg, nil
+}
+
 func strEnv(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
