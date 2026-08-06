@@ -3,11 +3,15 @@ module github.com/chewcw/netwatch
 go 1.26.5
 
 require (
+	github.com/fsouza/go-dockerclient v1.13.2
+	golang.org/x/oauth2 v0.36.0
+)
+
+require (
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/fsouza/go-dockerclient v1.13.2 // indirect
 	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
 	github.com/moby/moby/api v1.54.2 // indirect
