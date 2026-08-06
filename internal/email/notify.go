@@ -92,7 +92,7 @@ func (n *notifier) sendWithRetry(ctx context.Context, subj, body string) error {
 	backoff := 1 * time.Second
 	refreshed := false
 	for {
-		lastErr := n.trySend(subj, body, &refreshed)
+		lastErr := n.trySend(ctx, subj, body, &refreshed)
 		if lastErr == nil {
 			return nil
 		}
@@ -113,22 +113,22 @@ func (n *notifier) sendWithRetry(ctx context.Context, subj, body string) error {
 
 // trySend performs one send attempt, force-refreshing once when Graph
 // rejects the access token with 401.
-func (n *notifier) trySend(subj, body string, refreshed *bool) error {
-	tok, err := n.ts.Token(n.ctx)
+func (n *notifier) trySend(ctx context.Context, subj, body string, refreshed *bool) error {
+	tok, err := n.ts.Token(ctx)
 	if err != nil {
 		return err // ErrAuthDead or a transient refresh failure
 	}
-	err = n.sendOnce(n.ctx, tok, subj, body)
+	err = n.sendOnce(ctx, tok, subj, body)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, errUnauthorized) && !*refreshed {
 		*refreshed = true
-		tok, rerr := n.ts.ForceRefresh(n.ctx)
+		tok, rerr := n.ts.ForceRefresh(ctx)
 		if rerr != nil {
 			return rerr
 		}
-		return n.sendOnce(n.ctx, tok, subj, body)
+		return n.sendOnce(ctx, tok, subj, body)
 	}
 	return err
 }

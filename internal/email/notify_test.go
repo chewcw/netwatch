@@ -2,8 +2,11 @@ package email
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -14,6 +17,11 @@ import (
 
 	"github.com/chewcw/netwatch/internal/detector"
 )
+
+func TestMain(m *testing.M) {
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+	os.Exit(m.Run())
+}
 
 func TestBuildMessageAlerted(t *testing.T) {
 	subj, body := buildMessage("edge1", detector.Alert{
@@ -155,6 +163,40 @@ func TestSendTestNoToken(t *testing.T) {
 	defer n.Close()
 	if err := n.SendTest(context.Background()); err == nil {
 		t.Fatal("expected error when no token")
+	}
+}
+
+func TestSendTestCancelledContext(t *testing.T) {
+	// A cancelled context must abort I/O even when the token is valid.
+	mux := http.NewServeMux()
+	done := make(chan struct{})
+	var blocked atomic.Bool
+	mux.HandleFunc("/v1.0/me/sendMail", func(w http.ResponseWriter, r *http.Request) {
+		blocked.Store(true)
+		<-done // block until test releases
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	go func() {
+		// Wait for the handler to be entered, then release so the test
+		// can proceed (the ctx-cancel should abort the HTTP call).
+		for !blocked.Load() {
+			time.Sleep(5 * time.Millisecond)
+		}
+		close(done)
+	}()
+
+	n := newTestNotifier(t, srv.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	start := time.Now()
+	err := n.SendTest(ctx)
+	if err == nil {
+		t.Fatal("expected error from cancelled context")
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("SendTest blocked for %s with cancelled ctx, want fast return", d)
 	}
 }
 
