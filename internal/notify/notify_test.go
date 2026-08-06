@@ -58,7 +58,7 @@ type closeNotifier struct {
 }
 
 func (f *closeNotifier) Notify(_ context.Context, _ detector.Alert) error { return nil }
-func (f *closeNotifier) Close()                                         { *f.closed = f.name }
+func (f *closeNotifier) Close()                                           { *f.closed = f.name }
 
 func TestLogNotifier(t *testing.T) {
 	var buf bytes.Buffer

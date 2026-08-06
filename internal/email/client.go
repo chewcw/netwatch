@@ -179,8 +179,8 @@ func isInvalidGrant(err error) bool {
 // sendMailRequest is the JSON body for POST /v1.0/me/sendMail.
 type sendMailRequest struct {
 	Message struct {
-		Subject      string `json:"subject"`
-		Body         struct {
+		Subject string `json:"subject"`
+		Body    struct {
 			ContentType string `json:"contentType"`
 			Content     string `json:"content"`
 		} `json:"body"`
@@ -197,13 +197,13 @@ type sendMailRequest struct {
 // can live next to the HTTP layer; Task 4 fills in the lifecycle (New, Notify,
 // Close, keep-alive).
 type notifier struct {
-	cfg      Config
-	http     *http.Client
-	ts       *persistingTokenSource
-	authOK   bool
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
+	cfg    Config
+	http   *http.Client
+	ts     *persistingTokenSource
+	authOK bool
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // sendOnce posts one message to Graph. It classifies the response: nil on

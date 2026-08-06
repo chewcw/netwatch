@@ -90,15 +90,15 @@ func TestLoadInvalid(t *testing.T) {
 
 func TestLoadEmailChannel(t *testing.T) {
 	env := map[string]string{
-		"NETWATCH_TARGETS":              "a",
-		"NETWATCH_NOTIFY":               "email",
-		"NETWATCH_EMAIL_TENANT_ID":      "tenant-1",
-		"NETWATCH_EMAIL_CLIENT_ID":      "client-1",
-		"NETWATCH_EMAIL_TO":             "me@example.com, ops@example.com",
-		"NETWATCH_EMAIL_TOKEN_FILE":     "/data/t.json",
-		"NETWATCH_EMAIL_KEEPALIVE":      "6h",
-		"NETWATCH_EMAIL_RETRY_WINDOW":   "2m",
-		"NETWATCH_EMAIL_HOST":           "edge-pc-7",
+		"NETWATCH_TARGETS":            "a",
+		"NETWATCH_NOTIFY":             "email",
+		"NETWATCH_EMAIL_TENANT_ID":    "tenant-1",
+		"NETWATCH_EMAIL_CLIENT_ID":    "client-1",
+		"NETWATCH_EMAIL_TO":           "me@example.com, ops@example.com",
+		"NETWATCH_EMAIL_TOKEN_FILE":   "/data/t.json",
+		"NETWATCH_EMAIL_KEEPALIVE":    "6h",
+		"NETWATCH_EMAIL_RETRY_WINDOW": "2m",
+		"NETWATCH_EMAIL_HOST":         "edge-pc-7",
 	}
 	setEnv(t, env)
 	cfg, err := Load()
