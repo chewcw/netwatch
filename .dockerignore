@@ -1,0 +1,11 @@
+# Keep the build context small and keep secrets out of the image build.
+.git
+docs/
+.superpowers/
+.pi/
+.pi-subagents/
+token.json
+.env
+*.log
+/netwatch
+scripts/

@@ -2,6 +2,8 @@ services:
   netwatch:
     build: .
     image: netwatch:edge
+    # Edge devices: pull the multi-platform image from a registry instead of
+    # building (see README "Build the image") — e.g. image: your-registry/netwatch:edge
     restart: unless-stopped
     environment:
       NETWATCH_TARGETS: "sensor-collector"
