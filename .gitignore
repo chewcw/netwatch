@@ -8,3 +8,4 @@ docs/
 # local email token (contains OAuth credentials — never commit)
 token.json
 .env
+.codegraph/
