@@ -117,8 +117,46 @@ docker compose up -d
 
 ### Build the image
 
+**CI (recommended):** the GitHub Actions workflow
+`.github/workflows/build.yml` runs the test suite, then cross-builds and pushes
+to Docker Hub (`chewcw/netwatch`):
+
+- Push to `main` → `chewcw/netwatch:edge` (rolling build)
+- Tag `v1.2.3` → `chewcw/netwatch:v1.2.3` + `chewcw/netwatch:latest` (version
+  baked into `netwatch --version`)
+
+Edge devices then just pull: `docker pull chewcw/netwatch:edge`
+
+Set repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub
+access token, not your password) and create the `chewcw/netwatch` repository
+on Docker Hub before the first run.
+
+**Local multi-platform build** (arm/v7, arm64, amd64):
+
+```sh
+# Create a docker-container builder (the default docker driver supports only
+# the host platform — the container driver assembles multi-arch manifests).
+docker buildx create --use --name multiarch
+
+# With builder active, cross-compile for all three platforms and push:
+docker buildx build --platform linux/arm/v7,linux/arm64,linux/amd64 \
+  -t chewcw/netwatch:edge --push .
+
+# Override --version output (default "dev"):
+#   --build-arg VERSION=v1.2.3
+```
+
+No QEMU or binfmt is required: the Go build stage runs on your machine
+(BUILDPLATFORM) and cross-compiles per target via GOOS/GOARCH; the distroless
+runtime is pulled per platform by buildx.
+
+**Local dev build** (current machine's platform only — `compose` path):
+
 ```sh
 docker build -t netwatch:edge .
+
+# Or with buildx for a single platform:
+docker buildx build --load --platform linux/amd64 -t netwatch:edge .
 ```
 
 ### Azure IoT Edge module
