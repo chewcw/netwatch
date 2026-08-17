@@ -16,12 +16,12 @@ docker network create nw-demo 2>/dev/null || true
 docker run -d --name nw-demo-cloud --network nw-demo \
   alpine sh -c 'apk add --no-cache socat >/dev/null 2>&1; exec socat -u UDP-RECV:9999 -' >/dev/null
 
-# Sensor: 2kB UDP datagrams every 1s (clearly above MIN_TRAFFIC).
+# Sensor: 2kB UDP datagrams every 1s (clearly above MIN_TRAFFIC_RX).
 docker run -d --name nw-demo-sensor --network nw-demo \
   alpine sh -c 'while true; do head -c 2000 /dev/zero | nc -u -w 1 nw-demo-collector 5555; sleep 1; done' >/dev/null
 
 # Collector: listens for the sensor on 5555 AND forwards 2kB datagrams upstream
-# to the cloud listener every 1s. MIN_TRAFFIC tolerates ambient host multicast
+# to the cloud listener every 1s. MIN_TRAFFIC_RX/TX tolerates ambient host multicast
 # (SSDP/mDNS) that Docker delivers to every bridge container — strict-zero
 # silence would be unreachable on a busy host.
 docker run -d --name nw-demo-collector --network nw-demo \
@@ -33,7 +33,8 @@ docker run --rm --name nw-demo-netwatch \
   -e NETWATCH_TARGETS=nw-demo-collector \
   -e NETWATCH_CHECK_INTERVAL=2s \
   -e NETWATCH_ALERT_AFTER=6s \
-  -e NETWATCH_MIN_TRAFFIC=2000 \
+  -e NETWATCH_MIN_TRAFFIC_RX=2000 \
+  -e NETWATCH_MIN_TRAFFIC_TX=2000 \
   --group-add "$DOCKER_GID" \
   -v /var/run/docker.sock:/var/run/docker.sock \
   netwatch:edge > /tmp/netwatch-demo.log 2>&1 &

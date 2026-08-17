@@ -9,6 +9,11 @@ services:
       NETWATCH_TARGETS: "sensor-collector"
       NETWATCH_CHECK_INTERVAL: "30s"
       NETWATCH_ALERT_AFTER: "90s"
+      NETWATCH_MIN_TRAFFIC_RX: "0"
+      NETWATCH_MIN_TRAFFIC_TX: "0"
+      NETWATCH_DOCKER_HOST: "unix:///var/run/docker.sock"
+      NETWATCH_NOTIFY: "log"
+      NETWATCH_LOG_LEVEL: "info"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     # The image runs as the distroless nonroot user; it needs the host's

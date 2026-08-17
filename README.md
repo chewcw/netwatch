@@ -16,8 +16,9 @@ dependency on the very IoT Hub link being monitored.
 ## How detection works
 
 Per check interval, `netwatch` fetches each target container's stats and
-computes the rx/tx byte deltas. A delta at or below `NETWATCH_MIN_TRAFFIC`
-counts as a *silent* tick for that axis (default 0 = strict zero). When an
+computes the rx/tx byte deltas. A delta at or below `NETWATCH_MIN_TRAFFIC_RX`
+counts as a *silent* tick for the rx axis, and at or below
+`NETWATCH_MIN_TRAFFIC_TX` for the tx axis (default 0 = strict zero). When an
 axis stays silent for `NETWATCH_ALERT_AFTER`, an alert fires — once per
 incident. When traffic resumes, a recovery notification fires. A container
 that is stopped or removed fires a "not running" alert.
@@ -41,7 +42,8 @@ Alert kinds: `alerted` (incident starts), `recovered` (traffic resumed),
 | `NETWATCH_TARGETS` | *(required)* | Comma-separated container names/IDs to watch |
 | `NETWATCH_CHECK_INTERVAL` | `30s` | Polling period |
 | `NETWATCH_ALERT_AFTER` | `3 × interval` | Silence/dead duration before alerting |
-| `NETWATCH_MIN_TRAFFIC` | `0` | Bytes/tick; a delta at or below this counts as silent (set higher to ride over MQTT keepalive noise) |
+| `NETWATCH_MIN_TRAFFIC_RX` | `0` | Bytes/tick; an rx delta at or below this counts as silent |
+| `NETWATCH_MIN_TRAFFIC_TX` | `0` | Bytes/tick; a tx delta at or below this counts as silent |
 | `NETWATCH_DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon endpoint |
 | `NETWATCH_NOTIFY` | `log` | Notifier channels, comma-separated: `log`, `email` (email also always logs) |
 | `NETWATCH_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
@@ -80,7 +82,8 @@ corresponding environment variables — precedence is **flag > env > default**:
 | `--targets a,b` | `NETWATCH_TARGETS` | required |
 | `--check-interval 45s` | `NETWATCH_CHECK_INTERVAL` | 30s |
 | `--alert-after 2m` | `NETWATCH_ALERT_AFTER` | 3 × check-interval |
-| `--min-traffic 100` | `NETWATCH_MIN_TRAFFIC` | 0 |
+| `--min-traffic-rx 100` | `NETWATCH_MIN_TRAFFIC_RX` | 0 |
+| `--min-traffic-tx 50` | `NETWATCH_MIN_TRAFFIC_TX` | 0 |
 | `--docker-host tcp://h:2375` | `NETWATCH_DOCKER_HOST` | unix:///var/run/docker.sock |
 | `--notify log,email` | `NETWATCH_NOTIFY` | log |
 | `--log-level debug` | `NETWATCH_LOG_LEVEL` | info |
