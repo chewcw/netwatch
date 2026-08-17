@@ -60,7 +60,7 @@ func (s State) String() string {
 }
 
 type Detector struct {
-	target         string
+	target string
 	// threshold is the ticks duration that the rx silent or tx silent should persist
 	// in order to raise the alert
 	threshold      int

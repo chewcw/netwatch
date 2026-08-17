@@ -90,9 +90,9 @@ func TestCloudSideVerdict(t *testing.T) {
 func TestMinTrafficPerAxis(t *testing.T) {
 	// rx threshold 200, tx threshold 10 — axes are silent independently.
 	d := New("c", 3, 200, 10)
-	d.Feed(0, 0)      // seed
-	d.Feed(200, 20)   // rx silent (delta == minRx), tx active
-	d.Feed(200, 40)   // rx silent tick 2, tx active
+	d.Feed(0, 0)           // seed
+	d.Feed(200, 20)        // rx silent (delta == minRx), tx active
+	d.Feed(200, 40)        // rx silent tick 2, tx active
 	got := d.Feed(200, 60) // rx silent tick 3 -> Alerted, tx active
 	if len(got) != 1 || got[0].Kind != KindAlerted {
 		t.Fatalf("want Alerted on rx silent, got %v", kinds(got))
@@ -103,9 +103,9 @@ func TestMinTrafficPerAxis(t *testing.T) {
 
 	// mirrored on tx: rx active above 200, tx silent at 10.
 	d2 := New("c", 3, 200, 10)
-	d2.Feed(0, 0)      // seed
-	d2.Feed(201, 10)   // rx active, tx silent (delta == minTx)
-	d2.Feed(402, 10)   // rx active, tx silent tick 2
+	d2.Feed(0, 0)            // seed
+	d2.Feed(201, 10)         // rx active, tx silent (delta == minTx)
+	d2.Feed(402, 10)         // rx active, tx silent tick 2
 	got2 := d2.Feed(603, 10) // rx active, tx silent tick 3 -> Alerted
 	if len(got2) != 1 || got2[0].Kind != KindAlerted {
 		t.Fatalf("want Alerted on tx silent, got %v", kinds(got2))
@@ -116,9 +116,9 @@ func TestMinTrafficPerAxis(t *testing.T) {
 
 	// deltas above each threshold are active and must not alert.
 	d3 := New("c", 3, 200, 10)
-	d3.Feed(0, 0)     // seed
-	d3.Feed(201, 11)  // both active
-	d3.Feed(402, 22)  // both active
+	d3.Feed(0, 0)    // seed
+	d3.Feed(201, 11) // both active
+	d3.Feed(402, 22) // both active
 	if got3 := d3.Feed(603, 33); len(got3) != 0 {
 		t.Fatalf("delta>minTraffic emitted: %v", kinds(got3))
 	}
