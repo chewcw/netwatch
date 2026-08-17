@@ -63,8 +63,8 @@ type Detector struct {
 	target         string
 	// threshold is the ticks duration that the rx silent or tx silent should persist
 	// in order to raise the alert
-	threshold      int 
-	minTraffic     uint64
+	threshold      int
+	minRx, minTx   uint64
 	lastRx, lastTx uint64
 	haveBaseline   bool
 
@@ -74,15 +74,16 @@ type Detector struct {
 	state         State
 }
 
-func New(target string, thresholdTicks int, minTraffic uint64) *Detector {
+func New(target string, thresholdTicks int, minRx, minTx uint64) *Detector {
 	if thresholdTicks < 1 {
 		thresholdTicks = 1
 	}
 	return &Detector{
-		target:     target,
-		threshold:  thresholdTicks,
-		minTraffic: minTraffic,
-		state:      StateNormal,
+		target:    target,
+		threshold: thresholdTicks,
+		minRx:     minRx,
+		minTx:     minTx,
+		state:     StateNormal,
 	}
 }
 
@@ -105,8 +106,8 @@ func (d *Detector) Feed(rx, tx uint64) []Alert {
 		return nil
 	}
 
-	rxDelta, rxSilent := d.axisDelta(rx, &d.lastRx)
-	txDelta, txSilent := d.axisDelta(tx, &d.lastTx)
+	rxDelta, rxSilent := d.axisDelta(rx, &d.lastRx, d.minRx)
+	txDelta, txSilent := d.axisDelta(tx, &d.lastTx, d.minTx)
 	d.lastRx, d.lastTx = rx, tx
 
 	if rxSilent {
@@ -175,14 +176,15 @@ func (d *Detector) FeedDead() []Alert {
 
 // axisDelta returns (delta, silent). A negative delta means the container's
 // counters reset (restart): baseline is updated and the tick counts silent.
-func (d *Detector) axisDelta(cur uint64, last *uint64) (uint64, bool) {
+// minTraffic is the per-axis threshold: a delta at or below it counts silent.
+func (d *Detector) axisDelta(cur uint64, last *uint64, minTraffic uint64) (uint64, bool) {
 	if cur < *last {
 		slog.Debug("detector: counter reset (container restarted)", "target", d.target, "last", *last, "cur", cur)
 		*last = cur
 		return 0, true
 	}
 	delta := cur - *last
-	return delta, delta <= d.minTraffic
+	return delta, delta <= minTraffic
 }
 
 func (d *Detector) resetCounters() {

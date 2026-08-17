@@ -14,7 +14,7 @@ func kinds(alerts []Alert) []Kind {
 }
 
 func TestSilentToAlertToRecover(t *testing.T) {
-	d := New("c", 3, 0)
+	d := New("c", 3, 0, 0)
 	// seed baseline
 	if got := d.Feed(100, 100); len(got) != 0 {
 		t.Fatalf("seed feed emitted alerts: %v", got)
@@ -75,7 +75,7 @@ func TestSilentToAlertToRecover(t *testing.T) {
 
 func TestCloudSideVerdict(t *testing.T) {
 	// rx stays active, tx silent -> cloud-path suspect
-	d := New("c", 2, 0)
+	d := New("c", 2, 0, 0)
 	d.Feed(0, 0)          // seed
 	d.Feed(100, 0)        // rx active, tx silent (tx silent tick 1)
 	got := d.Feed(200, 0) // rx active, tx silent (tx silent tick 2) -> Alerted
@@ -87,27 +87,46 @@ func TestCloudSideVerdict(t *testing.T) {
 	}
 }
 
-func TestMinTrafficBoundary(t *testing.T) {
-	// minTraffic=200: delta 200 is silent, delta 201 is active
-	d := New("c", 3, 200)
-	d.Feed(0, 0)
-	d.Feed(200, 200) // silent (delta == minTraffic)
-	d.Feed(200, 200) // silent tick 2
-	if got := d.Feed(200, 200); len(got) != 1 || got[0].Kind != KindAlerted {
-		t.Fatalf("want Alerted on delta==minTraffic, got %v", kinds(got))
+func TestMinTrafficPerAxis(t *testing.T) {
+	// rx threshold 200, tx threshold 10 — axes are silent independently.
+	d := New("c", 3, 200, 10)
+	d.Feed(0, 0)      // seed
+	d.Feed(200, 20)   // rx silent (delta == minRx), tx active
+	d.Feed(200, 40)   // rx silent tick 2, tx active
+	got := d.Feed(200, 60) // rx silent tick 3 -> Alerted, tx active
+	if len(got) != 1 || got[0].Kind != KindAlerted {
+		t.Fatalf("want Alerted on rx silent, got %v", kinds(got))
 	}
-	d2 := New("c", 3, 200)
-	d2.Feed(0, 0)
-	d2.Feed(201, 201) // active (delta > minTraffic)
-	d2.Feed(201, 201) // still active, no alert
-	if got := d2.Feed(201, 201); len(got) != 0 {
-		t.Fatalf("delta>minTraffic emitted: %v", kinds(got))
+	if !got[0].SilentRx || got[0].SilentTx {
+		t.Errorf("verdict = rx:%v tx:%v, want rx silent tx active", got[0].SilentRx, got[0].SilentTx)
+	}
+
+	// mirrored on tx: rx active above 200, tx silent at 10.
+	d2 := New("c", 3, 200, 10)
+	d2.Feed(0, 0)      // seed
+	d2.Feed(201, 10)   // rx active, tx silent (delta == minTx)
+	d2.Feed(402, 10)   // rx active, tx silent tick 2
+	got2 := d2.Feed(603, 10) // rx active, tx silent tick 3 -> Alerted
+	if len(got2) != 1 || got2[0].Kind != KindAlerted {
+		t.Fatalf("want Alerted on tx silent, got %v", kinds(got2))
+	}
+	if got2[0].SilentRx || !got2[0].SilentTx {
+		t.Errorf("verdict = rx:%v tx:%v, want rx active tx silent", got2[0].SilentRx, got2[0].SilentTx)
+	}
+
+	// deltas above each threshold are active and must not alert.
+	d3 := New("c", 3, 200, 10)
+	d3.Feed(0, 0)     // seed
+	d3.Feed(201, 11)  // both active
+	d3.Feed(402, 22)  // both active
+	if got3 := d3.Feed(603, 33); len(got3) != 0 {
+		t.Fatalf("delta>minTraffic emitted: %v", kinds(got3))
 	}
 }
 
 func TestCounterResetCountsSilent(t *testing.T) {
 	// restart resets counters: rx goes 100 -> 5 (delta would be negative)
-	d := New("c", 3, 0)
+	d := New("c", 3, 0, 0)
 	d.Feed(100, 100)    // seed
 	d.Feed(5, 5)        // counter reset -> silent tick 1
 	d.Feed(5, 5)        // silent tick 2
@@ -118,7 +137,7 @@ func TestCounterResetCountsSilent(t *testing.T) {
 }
 
 func TestDeadAndBack(t *testing.T) {
-	d := New("c", 2, 0)
+	d := New("c", 2, 0, 0)
 	d.Feed(100, 100)
 	// brief 404 (restart) must not fire Dead
 	if got := d.FeedDead(); len(got) != 0 {
@@ -146,7 +165,7 @@ func TestDeadAndBack(t *testing.T) {
 }
 
 func TestThresholdMinimumOne(t *testing.T) {
-	d := New("c", 1, 0)
+	d := New("c", 1, 0, 0)
 	d.Feed(100, 100)
 	got := d.Feed(100, 100) // first silent tick already meets threshold 1
 	if len(got) != 1 || got[0].Kind != KindAlerted {
@@ -155,7 +174,7 @@ func TestThresholdMinimumOne(t *testing.T) {
 }
 
 func TestAlertTimestampSet(t *testing.T) {
-	d := New("c", 1, 0)
+	d := New("c", 1, 0, 0)
 	d.Feed(1, 1)
 	before := time.Now()
 	got := d.Feed(1, 1)
