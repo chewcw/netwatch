@@ -43,8 +43,10 @@ func New(ctx context.Context, cfg Config) *notifier {
 // the chained log channel is the fallback.
 func (n *notifier) Notify(ctx context.Context, a detector.Alert) error {
 	if ctx.Err() != nil || !n.authOK {
+		slog.Debug("email: notify skipped", "target", a.Target, "kind", a.Kind.String(), "ctx_err", ctx.Err(), "auth_ok", n.authOK)
 		return nil
 	}
+	slog.Debug("email: notify queued", "target", a.Target, "kind", a.Kind.String())
 	subj, body := buildMessage(n.cfg.Host, a)
 	n.wg.Add(1)
 	go func() {
@@ -102,6 +104,7 @@ func (n *notifier) sendWithRetry(ctx context.Context, subj, body string) error {
 		if time.Now().After(deadline) {
 			return fmt.Errorf("email: giving up after %s: %w", n.cfg.RetryWindow, lastErr)
 		}
+		slog.Debug("email: send attempt failed, retrying", "subject", subj, "err", lastErr, "backoff", backoff)
 		if !sleepCtx(ctx, backoff) {
 			return ctx.Err()
 		}

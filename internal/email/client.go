@@ -128,11 +128,13 @@ func (s *persistingTokenSource) Token(ctx context.Context) (*oauth2.Token, error
 			s.dead = true
 			return nil, ErrAuthDead
 		}
+		slog.Debug("email: access token refresh failed", "err", err)
 		return nil, err
 	}
 	if err := s.store.Save(tok); err != nil {
 		slog.Warn("email: could not persist refreshed token", "err", err)
 	}
+	slog.Debug("email: access token refreshed")
 	return tok, nil
 }
 
@@ -244,6 +246,7 @@ func (n *notifier) sendOnce(ctx context.Context, tok *oauth2.Token, subject, bod
 	defer resp.Body.Close()
 	switch {
 	case resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted:
+		slog.Debug("email: sent", "subject", subject, "status", resp.StatusCode)
 		return nil
 	case resp.StatusCode == http.StatusUnauthorized:
 		return errUnauthorized

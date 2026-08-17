@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -92,11 +93,13 @@ func (d *Detector) Feed(rx, tx uint64) []Alert {
 	if d.state == StateDead {
 		d.resetCounters()
 		d.state = StateNormal
+		slog.Debug("detector: container back", "target", d.target)
 		return []Alert{{Target: d.target, Kind: KindBack, RxDelta: 0, TxDelta: 0, SilentRx: false, SilentTx: false, At: time.Now()}}
 	}
 	d.deadTicks = 0 // a live sample breaks any 404 streak
 	if !d.haveBaseline {
 		d.lastRx, d.lastTx, d.haveBaseline = rx, tx, true
+		slog.Debug("detector: baseline seeded", "target", d.target, "rx", rx, "tx", tx)
 		return nil
 	}
 
@@ -115,16 +118,38 @@ func (d *Detector) Feed(rx, tx uint64) []Alert {
 		d.silentTxTicks = 0
 	}
 
+	slog.Debug("detector: sample",
+		"target", d.target,
+		"rx", rx, "tx", tx,
+		"rx_delta", rxDelta, "tx_delta", txDelta,
+		"rx_silent", rxSilent, "tx_silent", txSilent,
+		"silent_rx_ticks", d.silentRxTicks, "silent_tx_ticks", d.silentTxTicks,
+		"threshold", d.threshold,
+		"state", d.state.String(),
+	)
+
 	switch d.state {
 	case StateAlerting:
 		if !rxSilent && !txSilent {
 			d.state = StateNormal
+			slog.Info("detector: recovered",
+				"target", d.target,
+				"rx_delta", rxDelta, "tx_delta", txDelta,
+				"silent_rx_ticks", d.silentRxTicks, "silent_tx_ticks", d.silentTxTicks,
+			)
 			return []Alert{{Target: d.target, Kind: KindRecovered, RxDelta: rxDelta, TxDelta: txDelta, SilentRx: rxSilent, SilentTx: txSilent, At: time.Now()}}
 		}
 		return nil
 	default: // StateNormal
 		if d.silentRxTicks >= d.threshold || d.silentTxTicks >= d.threshold {
 			d.state = StateAlerting
+			slog.Info("detector: alerting",
+				"target", d.target,
+				"threshold", d.threshold,
+				"silent_rx_ticks", d.silentRxTicks, "silent_tx_ticks", d.silentTxTicks,
+				"rx_silent", rxSilent, "tx_silent", txSilent,
+				"rx_delta", rxDelta, "tx_delta", txDelta,
+			)
 			return []Alert{{Target: d.target, Kind: KindAlerted, RxDelta: rxDelta, TxDelta: txDelta, SilentRx: rxSilent, SilentTx: txSilent, At: time.Now()}}
 		}
 		return nil
@@ -133,8 +158,14 @@ func (d *Detector) Feed(rx, tx uint64) []Alert {
 
 func (d *Detector) FeedDead() []Alert {
 	d.deadTicks++
+	slog.Debug("detector: dead tick",
+		"target", d.target,
+		"dead_ticks", d.deadTicks, "threshold", d.threshold,
+		"state", d.state.String(),
+	)
 	if d.state != StateDead && d.deadTicks >= d.threshold {
 		d.state = StateDead
+		slog.Info("detector: dead", "target", d.target, "dead_ticks", d.deadTicks, "threshold", d.threshold)
 		return []Alert{{Target: d.target, Kind: KindDead, RxDelta: 0, TxDelta: 0, SilentRx: false, SilentTx: false, At: time.Now()}}
 	}
 	return nil
@@ -144,6 +175,7 @@ func (d *Detector) FeedDead() []Alert {
 // counters reset (restart): baseline is updated and the tick counts silent.
 func (d *Detector) axisDelta(cur uint64, last *uint64) (uint64, bool) {
 	if cur < *last {
+		slog.Debug("detector: counter reset (container restarted)", "target", d.target, "last", *last, "cur", cur)
 		*last = cur
 		return 0, true
 	}

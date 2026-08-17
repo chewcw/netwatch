@@ -47,10 +47,12 @@ func cycle(ctx context.Context, stats docker.StatsClient, dets map[string]*detec
 		cancel()
 		switch {
 		case errors.Is(err, docker.ErrNotFound), errors.Is(err, docker.ErrStopped):
+			slog.Debug("cycle: container unavailable", "target", name, "err", err)
 			emit(ctx, n, d.FeedDead())
 		case err != nil:
 			slog.Warn("stats fetch failed (not counted as silence)", "target", name, "err", err)
 		default:
+			slog.Debug("cycle: stats fetched", "target", name, "rx", rx, "tx", tx)
 			emit(ctx, n, d.Feed(rx, tx))
 		}
 	}
@@ -58,6 +60,7 @@ func cycle(ctx context.Context, stats docker.StatsClient, dets map[string]*detec
 
 func emit(ctx context.Context, n notify.Notifier, alerts []detector.Alert) {
 	for _, a := range alerts {
+		slog.Debug("cycle: alert emitted", "target", a.Target, "kind", a.Kind.String())
 		notifyCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		if err := n.Notify(notifyCtx, a); err != nil {
 			slog.Warn("notify failed", "target", a.Target, "kind", a.Kind.String(), "err", err)

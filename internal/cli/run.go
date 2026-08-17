@@ -28,6 +28,16 @@ func runMonitor(cmd *cobra.Command, _ []string) error {
 	}
 	setupLogging(cfg)
 
+	slog.Debug("netwatch starting",
+		"targets", cfg.Targets,
+		"check_interval", cfg.CheckInterval,
+		"alert_after", cfg.AlertAfter,
+		"min_traffic", cfg.MinTraffic,
+		"docker_host", cfg.DockerHost,
+		"notify", cfg.Notify,
+		"log_level", cfg.LogLevel,
+	)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

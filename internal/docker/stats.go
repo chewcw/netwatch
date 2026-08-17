@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/fsouza/go-dockerclient"
@@ -46,8 +47,10 @@ func (c *Client) GetStats(ctx context.Context, name string) (uint64, uint64, err
 		return 0, 0, classifyError(err)
 	}
 	if !ctr.State.Running {
+		slog.Debug("docker: container exists but is not running", "target", name, "state", ctr.State.String())
 		return 0, 0, ErrStopped
 	}
+	slog.Debug("docker: stats fetched", "target", name, "rx", rx, "tx", tx)
 	return rx, tx, nil
 }
 
@@ -76,6 +79,7 @@ func (c *Client) fetchStats(ctx context.Context, name string) (uint64, uint64, e
 	if !ok {
 		// channel closed without a sample (e.g. 404): fetch the error.
 		err := <-errCh
+		slog.Debug("docker: stats channel closed without sample", "target", name, "err", err)
 		return 0, 0, classifyError(err)
 	}
 	err := <-errCh
@@ -84,6 +88,7 @@ func (c *Client) fetchStats(ctx context.Context, name string) (uint64, uint64, e
 	}
 	rx, tx := uint64(0), uint64(0)
 	if len(s.Networks) > 0 {
+		slog.Debug("docker: aggregating network interfaces", "target", name, "interfaces", len(s.Networks))
 		for _, ns := range s.Networks {
 			rx += ns.RxBytes
 			tx += ns.TxBytes
@@ -107,6 +112,7 @@ func (c *Client) ListContainers(ctx context.Context, all bool) ([]string, error)
 			names = append(names, strings.TrimPrefix(n, "/"))
 		}
 	}
+	slog.Debug("docker: listed containers", "count", len(names), "all", all)
 	return names, nil
 }
 
