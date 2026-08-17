@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-	Targets       []string
-	CheckInterval time.Duration
-	AlertAfter    time.Duration
-	MinTraffic    uint64
-	DockerHost    string
-	Notify        []string
-	LogLevel      string
+	Targets                    []string
+	CheckInterval              time.Duration
+	AlertAfter                 time.Duration
+	MinRxTraffic, MinTxTraffic uint64
+	DockerHost                 string
+	Notify                     []string
+	LogLevel                   string
 
 	EmailTenantID    string
 	EmailClientID    string
@@ -54,11 +54,17 @@ func Load() (Config, error) {
 	}
 	cfg.AlertAfter = alertAfter
 
-	mt, err := uintEnv("NETWATCH_MIN_TRAFFIC", 0)
+	mtrx, err := uintEnv("NETWATCH_MIN_TRAFFIC_RX", 0)
 	if err != nil {
 		return cfg, err
 	}
-	cfg.MinTraffic = mt
+	cfg.MinRxTraffic = mtrx
+
+	mttx, err := uintEnv("NETWATCH_MIN_TRAFFIC_TX", 0)
+	if err != nil {
+		return cfg, err
+	}
+	cfg.MinTxTraffic = mttx
 
 	cfg.DockerHost = strEnv("NETWATCH_DOCKER_HOST", "unix:///var/run/docker.sock")
 

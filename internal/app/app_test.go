@@ -74,7 +74,7 @@ func TestRunEndToEndSequence(t *testing.T) {
 		Targets:       []string{"c"},
 		CheckInterval: 10 * time.Millisecond,
 		AlertAfter:    25 * time.Millisecond, // ceil(25/10)=3 ticks
-		MinTraffic:    0,
+		MinRxTraffic:  0,
 	}
 	// seed, active, silent, silent, silent(->alert), active, active(->recover)
 	stats := &fakeStats{seq: []statsResult{

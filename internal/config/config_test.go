@@ -25,8 +25,11 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.AlertAfter != 90*time.Second {
 		t.Errorf("AlertAfter = %v, want 90s", cfg.AlertAfter)
 	}
-	if cfg.MinTraffic != 0 {
-		t.Errorf("MinTraffic = %d, want 0", cfg.MinTraffic)
+	if cfg.MinRxTraffic != 0 {
+		t.Errorf("MinRxTraffic = %d, want 0", cfg.MinRxTraffic)
+	}
+	if cfg.MinTxTraffic != 0 {
+		t.Errorf("MinTxTraffic = %d, want 0", cfg.MinTxTraffic)
 	}
 	if cfg.DockerHost != "unix:///var/run/docker.sock" {
 		t.Errorf("DockerHost = %q", cfg.DockerHost)
@@ -41,7 +44,8 @@ func TestLoadOverrides(t *testing.T) {
 		"NETWATCH_TARGETS":        "a, b, ,c",
 		"NETWATCH_CHECK_INTERVAL": "15s",
 		"NETWATCH_ALERT_AFTER":    "1m",
-		"NETWATCH_MIN_TRAFFIC":    "512",
+		"NETWATCH_MIN_TRAFFIC_RX": "512",
+		"NETWATCH_MIN_TRAFFIC_TX": "128",
 		"NETWATCH_DOCKER_HOST":    "tcp://127.0.0.1:2375",
 		"NETWATCH_LOG_LEVEL":      "debug",
 	})
@@ -55,7 +59,7 @@ func TestLoadOverrides(t *testing.T) {
 	if cfg.CheckInterval != 15*time.Second || cfg.AlertAfter != time.Minute {
 		t.Errorf("intervals = %v / %v", cfg.CheckInterval, cfg.AlertAfter)
 	}
-	if cfg.MinTraffic != 512 || cfg.DockerHost != "tcp://127.0.0.1:2375" || cfg.LogLevel != "debug" {
+	if cfg.MinRxTraffic != 512 || cfg.MinTxTraffic != 128 || cfg.DockerHost != "tcp://127.0.0.1:2375" || cfg.LogLevel != "debug" {
 		t.Errorf("overrides not applied: %+v", cfg)
 	}
 }
@@ -70,7 +74,8 @@ func TestLoadInvalid(t *testing.T) {
 		{"only commas", map[string]string{"NETWATCH_TARGETS": ", ,"}, "NETWATCH_TARGETS"},
 		{"bad interval", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_CHECK_INTERVAL": "fast"}, "NETWATCH_CHECK_INTERVAL"},
 		{"zero interval", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_CHECK_INTERVAL": "0s"}, "NETWATCH_CHECK_INTERVAL"},
-		{"negative traffic", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_MIN_TRAFFIC": "-5"}, "NETWATCH_MIN_TRAFFIC"},
+		{"negative rx traffic", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_MIN_TRAFFIC_RX": "-5"}, "NETWATCH_MIN_TRAFFIC_RX"},
+		{"negative tx traffic", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_MIN_TRAFFIC_TX": "-5"}, "NETWATCH_MIN_TRAFFIC_TX"},
 		{"bad level", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_LOG_LEVEL": "loud"}, "NETWATCH_LOG_LEVEL"},
 		{"bad notify", map[string]string{"NETWATCH_TARGETS": "a", "NETWATCH_NOTIFY": "pigeon"}, "NETWATCH_NOTIFY"},
 	}

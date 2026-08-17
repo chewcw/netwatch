@@ -71,7 +71,8 @@ func registerRunFlags(cmd *cobra.Command) {
 	f.StringSlice("targets", nil, "comma-separated container names to monitor (overrides NETWATCH_TARGETS)")
 	f.Duration("check-interval", 0, "poll interval; default 30s (overrides NETWATCH_CHECK_INTERVAL)")
 	f.Duration("alert-after", 0, "silence duration before alerting; default 3x check-interval (overrides NETWATCH_ALERT_AFTER)")
-	f.Uint64("min-traffic", 0, "bytes/tick below which a tick counts as silent; default 0 (overrides NETWATCH_MIN_TRAFFIC)")
+	f.Uint64("min-traffic-rx", 0, "bytes/tick below which rx counts as silent; default 0 (overrides NETWATCH_MIN_TRAFFIC_RX)")
+	f.Uint64("min-traffic-tx", 0, "bytes/tick below which tx counts as silent; default 0 (overrides NETWATCH_MIN_TRAFFIC_TX)")
 	f.String("docker-host", "", "docker daemon endpoint; default unix:///var/run/docker.sock (overrides NETWATCH_DOCKER_HOST)")
 	f.StringSlice("notify", nil, "comma-separated channels: log,email; default log (overrides NETWATCH_NOTIFY)")
 	f.String("log-level", "", "log level: debug,info,warn,error; default info (overrides NETWATCH_LOG_LEVEL)")
@@ -95,9 +96,13 @@ func mergeFlags(cfg config.Config, cmd *cobra.Command) (config.Config, error) {
 		v, _ := f.GetDuration("alert-after")
 		cfg.AlertAfter = v
 	}
-	if f.Changed("min-traffic") {
-		v, _ := f.GetUint64("min-traffic")
-		cfg.MinTraffic = v
+	if f.Changed("min-traffic-rx") {
+		v, _ := f.GetUint64("min-traffic-rx")
+		cfg.MinRxTraffic = v
+	}
+	if f.Changed("min-traffic-tx") {
+		v, _ := f.GetUint64("min-traffic-tx")
+		cfg.MinTxTraffic = v
 	}
 	if f.Changed("docker-host") {
 		v, _ := f.GetString("docker-host")

@@ -18,7 +18,7 @@ func Run(ctx context.Context, cfg config.Config, stats docker.StatsClient, n not
 	ticks := thresholdTicks(cfg.AlertAfter, cfg.CheckInterval)
 	dets := make(map[string]*detector.Detector, len(cfg.Targets))
 	for _, name := range cfg.Targets {
-		dets[name] = detector.New(name, ticks, cfg.MinTraffic, cfg.MinTraffic)
+		dets[name] = detector.New(name, ticks, cfg.MinRxTraffic, cfg.MinTxTraffic)
 	}
 	if err := warnUnknownTargets(ctx, stats, cfg.Targets); err != nil {
 		slog.Warn("startup target check failed", "err", err)

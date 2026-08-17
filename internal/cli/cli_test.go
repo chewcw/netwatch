@@ -59,7 +59,7 @@ func TestNewRootCommand(t *testing.T) {
 	// verified by the `--help` smoke test (Task 2 Step 7).
 	// run shares the runMonitor behavior: both root and run must expose the
 	// 7 core flags.
-	for _, name := range []string{"targets", "check-interval", "alert-after", "min-traffic", "docker-host", "notify", "log-level"} {
+	for _, name := range []string{"targets", "check-interval", "alert-after", "min-traffic-rx", "min-traffic-tx", "docker-host", "notify", "log-level"} {
 		if root.Flags().Lookup(name) == nil {
 			t.Errorf("root missing flag --%s", name)
 		}
@@ -86,7 +86,8 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 		"NETWATCH_TARGETS":        "env-a,env-b",
 		"NETWATCH_CHECK_INTERVAL": "60s",
 		"NETWATCH_ALERT_AFTER":    "5m",
-		"NETWATCH_MIN_TRAFFIC":    "100",
+		"NETWATCH_MIN_TRAFFIC_RX": "100",
+		"NETWATCH_MIN_TRAFFIC_TX": "50",
 		"NETWATCH_DOCKER_HOST":    "unix:///tmp/env.sock",
 		"NETWATCH_NOTIFY":         "log",
 		"NETWATCH_LOG_LEVEL":      "warn",
@@ -99,7 +100,7 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 	t.Run("flags win over env", func(t *testing.T) {
 		root := NewRootCommand()
 		args := []string{"--targets", "a,b", "--check-interval", "45s",
-			"--alert-after", "2m", "--min-traffic", "7",
+			"--alert-after", "2m", "--min-traffic-rx", "7", "--min-traffic-tx", "9",
 			"--docker-host", "tcp://host:2375", "--notify", "log,email",
 			"--log-level", "debug"}
 		root.SetArgs(args)
@@ -119,8 +120,11 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 		if got.AlertAfter != 2*time.Minute {
 			t.Errorf("AlertAfter = %v, want 2m", got.AlertAfter)
 		}
-		if got.MinTraffic != 7 {
-			t.Errorf("MinTraffic = %d, want 7", got.MinTraffic)
+		if got.MinRxTraffic != 7 {
+			t.Errorf("MinRxTraffic = %d, want 7", got.MinRxTraffic)
+		}
+		if got.MinTxTraffic != 9 {
+			t.Errorf("MinTxTraffic = %d, want 9", got.MinTxTraffic)
 		}
 		if got.DockerHost != "tcp://host:2375" {
 			t.Errorf("DockerHost = %q, want tcp://host:2375", got.DockerHost)
@@ -148,8 +152,11 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 		if got.AlertAfter != 5*time.Minute {
 			t.Errorf("AlertAfter = %v, want env 5m", got.AlertAfter)
 		}
-		if got.MinTraffic != 100 {
-			t.Errorf("MinTraffic = %d, want env 100", got.MinTraffic)
+		if got.MinRxTraffic != 100 {
+			t.Errorf("MinRxTraffic = %d, want env 100", got.MinRxTraffic)
+		}
+		if got.MinTxTraffic != 50 {
+			t.Errorf("MinTxTraffic = %d, want env 50", got.MinTxTraffic)
 		}
 		if got.LogLevel != "warn" {
 			t.Errorf("LogLevel = %q, want env warn", got.LogLevel)
@@ -160,7 +167,8 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 		// setEnv only sets what's in the map; drop the interval keys by
 		// clearing them explicitly.
 		t.Setenv("NETWATCH_CHECK_INTERVAL", "")
-		t.Setenv("NETWATCH_MIN_TRAFFIC", "")
+		t.Setenv("NETWATCH_MIN_TRAFFIC_RX", "")
+		t.Setenv("NETWATCH_MIN_TRAFFIC_TX", "")
 		t.Setenv("NETWATCH_LOG_LEVEL", "")
 		base, err := config.Load()
 		if err != nil {
@@ -177,8 +185,11 @@ func TestMergeFlagsPrecedence(t *testing.T) {
 		if got.CheckInterval != 30*time.Second {
 			t.Errorf("CheckInterval = %v, want default 30s", got.CheckInterval)
 		}
-		if got.MinTraffic != 0 {
-			t.Errorf("MinTraffic = %d, want default 0", got.MinTraffic)
+		if got.MinRxTraffic != 0 {
+			t.Errorf("MinRxTraffic = %d, want default 0", got.MinRxTraffic)
+		}
+		if got.MinTxTraffic != 0 {
+			t.Errorf("MinTxTraffic = %d, want default 0", got.MinTxTraffic)
 		}
 		if got.LogLevel != "info" {
 			t.Errorf("LogLevel = %q, want default info", got.LogLevel)
@@ -232,7 +243,7 @@ func TestMergeFlagsInvariants(t *testing.T) {
 		{"empty notify flag", []string{"--notify", " "}, nil, config.Config{}, true},
 		{"negative interval", []string{"--check-interval", "-5s"}, nil, config.Config{}, true},
 		{"zero alert-after", []string{"--alert-after", "0s"}, nil, config.Config{}, true},
-		{"valid flags pass", []string{"--min-traffic", "3"}, nil, config.Config{}, false},
+		{"valid flags pass", []string{"--min-traffic-rx", "3"}, nil, config.Config{}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

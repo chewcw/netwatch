@@ -171,7 +171,7 @@ func TestIntegrationFullFlow(t *testing.T) {
 		Targets:       []string{receiverName},
 		CheckInterval: 2 * time.Second,
 		AlertAfter:    6 * time.Second, // ceil(6/2)=3 ticks
-		MinTraffic:    0,
+		MinRxTraffic:  0,
 		Notify:        []string{"log"},
 	}
 
